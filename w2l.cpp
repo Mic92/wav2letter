@@ -17,7 +17,7 @@
 #include "decoder/Decoder.h"
 #include "lm/KenLM.h"
 #include "decoder/Trie.h"
-#include "decoder/WordLMDecoder.h"
+#include "decoder/LexiconDecoder.h"
 
 #define W2LOG(LEVEL) (LOG(INFO) << "[w2lapi] ")
 
@@ -153,30 +153,29 @@ public:
           W2LOG(INFO) << "Invalid model type: " << FLAGS_criterion;
         }
 
-
-        // FIXME, don't use global flags
-        decoderOpt = DecoderOptions(
-            FLAGS_beamsize,
-            static_cast<float>(FLAGS_beamthreshold),
-            static_cast<float>(FLAGS_lmweight),
-            static_cast<float>(FLAGS_wordscore),
-            static_cast<float>(FLAGS_unkweight),
-            FLAGS_logadd,
-            static_cast<float>(FLAGS_silweight),
-            criterionType);
+        DecoderOptions decoderOpt(FLAGS_beamsize,
+                                  FLAGS_beamsizetoken,
+                                  FLAGS_beamthreshold,
+                                  FLAGS_lmweight,
+                                  FLAGS_wordscore,
+                                  FLAGS_unkscore,
+                                  FLAGS_silscore,
+                                  FLAGS_eosscore,
+                                  FLAGS_logadd,
+                                  criterionType);
 
         W2LOG(INFO) << "Loaded decoder options";
 
         auto transition = afToVector<float>(engine->criterion->param(0).array());
 
-        decoder.reset(new WordLMDecoder(
+        decoder.reset(new LexiconDecoder(
             decoderOpt,
             trie,
             lm,
             silIdx,
             blankIdx,
             unkIdx,
-            transition));
+            transition, false));
 
         W2LOG(INFO) << "Decoder initialized";
     }
@@ -219,7 +218,6 @@ public:
     int blankIdx;
     int unkIdx;
     Dictionary wordDict;
-    DecoderOptions decoderOpt;
 };
 
 extern "C" {
